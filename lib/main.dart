@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -25,17 +28,25 @@ class FilePickerHomePage extends StatefulWidget {
 
 class _FilePickerHomePageState extends State<FilePickerHomePage> {
   String? _fileName;
-  String? _filePath;
+  Uint8List? _fileBytes;
+  File? _file;
 
   Future<void> _pickFile() async {
-    FilePickerResult? result =
-        await FilePicker.platform.pickFiles(type: FileType.image);
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+    );
 
     if (result != null) {
-      setState(() {
-        _fileName = result.files.single.name;
-        _filePath = result.files.single.path;
-      });
+      PlatformFile file = result.files.single;
+
+      _fileName = file.name;
+      _fileBytes = file.bytes;
+      if (!kIsWeb) {
+        _file = File(file.path!);
+        _fileBytes = await _file!.readAsBytes();
+      }
+
+      setState(() {});
     } else {
       // User canceled the picker
     }
@@ -45,7 +56,7 @@ class _FilePickerHomePageState extends State<FilePickerHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('File Picker App'),
+        title: const Text('File Picker App'),
       ),
       body: Center(
         child: Column(
@@ -53,18 +64,35 @@ class _FilePickerHomePageState extends State<FilePickerHomePage> {
           children: <Widget>[
             ElevatedButton(
               onPressed: _pickFile,
-              child: Text('Pick a file'),
+              child: const Text('Pick a file'),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             if (_fileName != null)
               Text(
                 'File Name: $_fileName',
+                style: const TextStyle(fontSize: 16),
+              ),
+            if (_fileBytes != null)
+              const Text(
+                'File Bytes Available',
                 style: TextStyle(fontSize: 16),
               ),
-            if (_filePath != null)
-              Text(
-                'File Path: $_filePath',
+            if (_fileBytes == null)
+              const Text(
+                'File Bytes not available',
                 style: TextStyle(fontSize: 16),
+              ),
+            if (_file != null)
+              Text(
+                'File Path: $_file',
+                style: const TextStyle(fontSize: 16),
+              ),
+            if (_fileBytes != null)
+              Image.memory(
+                _fileBytes!,
+                fit: BoxFit.fill,
+                width: 300,
+                height: 300,
               ),
           ],
         ),
